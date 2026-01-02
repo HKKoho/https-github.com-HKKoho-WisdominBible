@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Module, PerspectiveType, ScripturePoint } from '../types';
 import { getWisdomAssistantResponse } from '../services/geminiService';
 import AudioNarration from './AudioNarration';
+import SpeechInputButton from './SpeechInputButton';
 
 interface ModulePlayerProps {
   module: Module;
@@ -26,6 +27,12 @@ const ModulePlayer: React.FC<ModulePlayerProps> = ({ module, onComplete }) => {
     setUserInputs(prev => ({ ...prev, [key]: value }));
   };
 
+  const handleSpeechTranscript = (key: string, transcript: string) => {
+    const currentVal = userInputs[key] || '';
+    const newVal = currentVal ? `${currentVal} ${transcript}` : transcript;
+    handleInputChange(key, newVal);
+  };
+
   const submitQuestion = async () => {
     const input = userInputs['life_question_input'];
     if (!input) return;
@@ -42,7 +49,6 @@ const ModulePlayer: React.FC<ModulePlayerProps> = ({ module, onComplete }) => {
       case 'LIFE_QUESTION':
         return `生活提問：${module.lifeQuestions.join('。')}${aiFeedback ? `。導師的回饋是：${aiFeedback}` : ''}`;
       case 'PERSPECTIVES':
-        // Explicitly cast Object.values results to ScripturePoint[] to avoid 'unknown' type errors
         return (Object.values(module.perspectives) as ScripturePoint[])
           .map(p => `${p.book}的觀點：${p.theme}。${p.description}`)
           .join('。');
@@ -67,18 +73,27 @@ const ModulePlayer: React.FC<ModulePlayerProps> = ({ module, onComplete }) => {
                 <h3 className="text-xl font-bold text-amber-900">第一階段：生活提問 (8分鐘)</h3>
                 <AudioNarration text={narrationText} />
               </div>
-              <p className="text-slate-700 leading-relaxed mb-6 italic">「智慧的起點在於誠實地面對生活中的困惑。」</p>
+              <p className="text-slate-700 leading-relaxed mb-6 italic">「智慧的起點在於誠實地面對生活中的選擇。」</p>
               <div className="space-y-6">
                 {module.lifeQuestions.map((q, idx) => (
                   <div key={idx}>
-                    <p className="font-medium text-slate-800 mb-3 text-lg">{q}</p>
+                    <div className="flex justify-between items-center mb-3">
+                      <p className="font-medium text-slate-800 text-lg">{q}</p>
+                      {idx === 0 && (
+                        <SpeechInputButton 
+                          onTranscript={(t) => handleSpeechTranscript('life_question_input', t)} 
+                        />
+                      )}
+                    </div>
                     {idx === 0 && (
-                      <textarea
-                        className="w-full h-32 p-4 border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition-all"
-                        placeholder="在此寫下您的想法 or 經驗..."
-                        value={userInputs['life_question_input'] || ''}
-                        onChange={(e) => handleInputChange('life_question_input', e.target.value)}
-                      />
+                      <div className="relative">
+                        <textarea
+                          className="w-full h-40 p-4 border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition-all pr-12"
+                          placeholder="在此寫下您的想法 or 使用右上方語音輸入..."
+                          value={userInputs['life_question_input'] || ''}
+                          onChange={(e) => handleInputChange('life_question_input', e.target.value)}
+                        />
+                      </div>
                     )}
                   </div>
                 ))}
@@ -198,10 +213,17 @@ const ModulePlayer: React.FC<ModulePlayerProps> = ({ module, onComplete }) => {
             <div className="space-y-6">
               {module.discussionPrompts.map((prompt, idx) => (
                 <div key={idx} className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
-                  <p className="text-lg font-bold text-slate-800 mb-4">{prompt}</p>
+                  <div className="flex justify-between items-start mb-4">
+                    <p className="text-lg font-bold text-slate-800 flex-grow pr-4">{prompt}</p>
+                    <SpeechInputButton 
+                      onTranscript={(t) => handleSpeechTranscript(`discussion_${idx}`, t)} 
+                    />
+                  </div>
                   <textarea
                     className="w-full h-32 p-4 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-transparent outline-none"
-                    placeholder="在小組討論後，記下您的體悟..."
+                    placeholder="在小組討論後，記下您的體悟或使用語音輸入..."
+                    value={userInputs[`discussion_${idx}`] || ''}
+                    onChange={(e) => handleInputChange(`discussion_${idx}`, e.target.value)}
                   />
                 </div>
               ))}
@@ -228,11 +250,18 @@ const ModulePlayer: React.FC<ModulePlayerProps> = ({ module, onComplete }) => {
                 <p className="text-slate-400 text-sm">—— 今天的核心智慧</p>
               </div>
               <div className="space-y-4">
-                <p className="text-slate-600">寫下一句話給今天的自己：</p>
+                <div className="flex items-center justify-center space-x-2">
+                  <p className="text-slate-600">寫下一句話給今天的自己：</p>
+                  <SpeechInputButton 
+                    onTranscript={(t) => handleSpeechTranscript('summary_input', t)} 
+                  />
+                </div>
                 <input 
                   type="text" 
                   className="w-full border-b-2 border-slate-300 focus:border-amber-500 py-3 px-2 outline-none text-xl text-center text-slate-800"
-                  placeholder="..."
+                  placeholder="在此輸入或用語音描述..."
+                  value={userInputs['summary_input'] || ''}
+                  onChange={(e) => handleInputChange('summary_input', e.target.value)}
                 />
               </div>
               <button 
@@ -259,7 +288,12 @@ const ModulePlayer: React.FC<ModulePlayerProps> = ({ module, onComplete }) => {
     <div className="max-w-4xl mx-auto">
       {/* Module Header */}
       <div className="mb-10 text-center">
-        <h2 className="text-3xl font-bold text-slate-900 mb-2 serif">{module.title}</h2>
+        <h2 className="text-3xl font-bold text-slate-900 mb-2 serif">
+          {module.title}
+          {module.id !== 1 && (
+            <span className="text-lg font-normal text-slate-400 ml-3">(正在構建中)</span>
+          )}
+        </h2>
         <p className="text-slate-500 tracking-wide uppercase text-sm font-medium">{module.subtitle}</p>
       </div>
 
