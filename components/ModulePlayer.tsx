@@ -26,7 +26,7 @@ const ModulePlayer: React.FC<ModulePlayerProps> = ({ module, onComplete }) => {
         "與家人共進晚餐並分享當天趣事", "練習鋼琴演奏與古典音樂欣賞", "在社區公園慢跑與體能鍛鍊",
         "閱讀歷史書籍深入了解古代文明", "陪伴年邁父母散步並傾聽往事", "參加志工服務回饋社會需求",
         "鑽研烹飪技巧為愛人製作美食", "學習外語提升國際視野與溝通", "在陽台種植花卉觀察生命成長",
-        "冥想與自我對話尋求內心平靜", "與好友深入談論人生理想與規劃", "觀看紀錄片反思環境與永續議題"
+        "冥想與自我對話尋求內心平靜", "與好友深入談論人生理想與規劃", "觀看紀錄片反思環境與運續議題"
       ],
       stats: {
         '是': 12,
@@ -59,8 +59,17 @@ const ModulePlayer: React.FC<ModulePlayerProps> = ({ module, onComplete }) => {
     if (!userInputs['life_question_input_0']) return;
 
     setIsLoadingFeedback(true);
-    const feedback = await getWisdomAssistantResponse(module, "生活回饋與反思", responses);
-    setAiFeedback(feedback);
+    
+    // 如果是第 1 課，我們不調用 AI 獲取回饋，直接跳轉到數據展示
+    if (module.id === 1) {
+      // 稍微模擬一下加載感，讓體驗更平滑
+      await new Promise(resolve => setTimeout(resolve, 800));
+      setAiFeedback("SKIPPED_FOR_MODULE_1");
+    } else {
+      const feedback = await getWisdomAssistantResponse(module, "生活回饋與反思", responses);
+      setAiFeedback(feedback);
+    }
+    
     setIsLoadingFeedback(false);
     setShowClassInsight(true);
   };
@@ -82,17 +91,17 @@ const ModulePlayer: React.FC<ModulePlayerProps> = ({ module, onComplete }) => {
       const isQuote = trimmedLine.startsWith('「') && trimmedLine.endsWith('」');
 
       return (
-        <p 
+        <div 
           key={i} 
           className={`leading-relaxed mb-2 ${
-            isHeader ? 'text-slate-900 font-bold text-lg mt-6' : 
-            isPoint ? 'text-slate-700 pl-4 border-l-2 border-slate-200' : 
-            isQuote ? 'text-amber-800 italic font-medium py-1 bg-amber-50/50 px-2 rounded' :
+            isHeader ? 'text-slate-900 font-bold text-lg mt-6 mb-3' : 
+            isPoint ? 'text-slate-800 font-semibold mt-4 text-base' : 
+            isQuote ? 'text-amber-800 italic font-medium py-1 bg-amber-50/50 px-2 rounded border-l-2 border-amber-200' :
             'text-slate-700'
           }`}
         >
           {trimmedLine}
-        </p>
+        </div>
       );
     });
   };
@@ -100,7 +109,10 @@ const ModulePlayer: React.FC<ModulePlayerProps> = ({ module, onComplete }) => {
   const narrationText = useMemo(() => {
     switch (currentStep) {
       case 'LIFE_QUESTION':
-        return `生活提問：${module.lifeQuestions.join('。位')}。${aiFeedback ? `。導師的回饋是：${aiFeedback}` : ''}`;
+        const feedbackPart = (module.id !== 1 && aiFeedback && aiFeedback !== "SKIPPED_FOR_MODULE_1") 
+          ? `。導師的回饋是：${aiFeedback}` 
+          : '';
+        return `生活提問：${module.lifeQuestions.join('。位')}。${feedbackPart}`;
       case 'PERSPECTIVES':
         return (Object.values(module.perspectives) as ScripturePoint[])
           .map(p => `${p.book}的觀點：${p.theme}。${p.description}`)
@@ -195,18 +207,21 @@ const ModulePlayer: React.FC<ModulePlayerProps> = ({ module, onComplete }) => {
               {isLoadingFeedback && (
                 <div className="mt-8 flex items-center space-x-3 text-slate-500 italic">
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-slate-900"></div>
-                  <span>導師正在研讀您的回應並彙整課堂數據...</span>
+                  <span>正在彙整課堂數據...</span>
                 </div>
               )}
 
               {aiFeedback && (
                 <div className="mt-8 animate-slideUp">
-                  <div className="bg-white p-6 rounded-xl border border-amber-200 shadow-inner mb-8">
-                    <h4 className="text-amber-600 font-bold mb-3 flex items-center">
-                      <span className="mr-2 text-xl">💡</span> 智慧導師的回饋：
-                    </h4>
-                    <p className="text-slate-700 leading-relaxed text-lg">{aiFeedback}</p>
-                  </div>
+                  {/* 第 1 課不顯示 AI 導師回饋 */}
+                  {module.id !== 1 && aiFeedback !== "SKIPPED_FOR_MODULE_1" && (
+                    <div className="bg-white p-6 rounded-xl border border-amber-200 shadow-inner mb-8">
+                      <h4 className="text-amber-600 font-bold mb-3 flex items-center">
+                        <span className="mr-2 text-xl">💡</span> 智慧導師的回饋：
+                      </h4>
+                      <p className="text-slate-700 leading-relaxed text-lg">{aiFeedback}</p>
+                    </div>
+                  )}
 
                   {showClassInsight && (
                     <ClassInsight 
@@ -282,12 +297,17 @@ const ModulePlayer: React.FC<ModulePlayerProps> = ({ module, onComplete }) => {
               <AudioNarration text={narrationText} />
             </div>
             <div className="bg-white border-2 border-amber-200 p-6 md:p-10 rounded-3xl shadow-sm">
-              <h4 className="text-xl font-bold text-amber-700 mb-8 flex items-center">
-                <svg className="w-6 h-6 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                </svg>
-                如何處理這些矛盾？
-              </h4>
+              <div className="mb-8">
+                <h4 className="text-2xl font-bold text-slate-900 flex items-center mb-1">
+                  <svg className="w-6 h-6 mr-3 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                  </svg>
+                  {module.id === 1 ? '什麼是智慧？' : '如何處理這些矛盾？'}
+                </h4>
+                {module.id === 1 && (
+                  <p className="text-amber-700 font-bold ml-9">聖經中「智慧」</p>
+                )}
+              </div>
               <div className="text-lg text-slate-700 leading-relaxed mb-8 serif">
                 {renderFormattedText(module.tensionGuide)}
               </div>
@@ -339,7 +359,7 @@ const ModulePlayer: React.FC<ModulePlayerProps> = ({ module, onComplete }) => {
                 <h3 className="text-2xl font-bold text-slate-800">第五階段：安靜整合 (5分鐘)</h3>
                 <AudioNarration text={narrationText} />
               </div>
-              <div className="bg-slate-900 text-white p-10 rounded-3xl shadow-2xl transform rotate-1">
+              <div className="bg-slate-900 text-white p-10 rounded-3xl shadow-2xl">
                 <p className="text-2xl font-bold mb-6 serif leading-relaxed">
                   「{module.summary}」
                 </p>
