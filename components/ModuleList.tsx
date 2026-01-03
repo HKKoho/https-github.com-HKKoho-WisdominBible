@@ -42,7 +42,7 @@ const ModuleList: React.FC<ModuleListProps> = ({ onSelectModule }) => {
                 <div className="relative z-10">
                   <h4 className="text-lg font-bold text-slate-800 mb-2 pr-10">
                     {module.title.split('｜')[1]}
-                    {module.id !== 1 && (
+                    {module.id > 6 && (
                       <span className="block text-xs font-normal text-slate-400 mt-1 italic">
                         (正在構建中)
                       </span>

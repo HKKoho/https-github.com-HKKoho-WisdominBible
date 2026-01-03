@@ -11,10 +11,9 @@ export interface ScripturePoint {
   description: string;
 }
 
-export interface ModuleStep {
-  id: string;
-  title: string;
-  duration: number; // minutes
+export interface User {
+  name: string;
+  loginTime: Date;
 }
 
 export interface Module {
